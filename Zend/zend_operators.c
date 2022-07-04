@@ -2111,7 +2111,7 @@ static int compare_double_to_string(double dval, zend_string *str, zend_bool equ
 }
 /* }}} */
 
-ZEND_API int ZEND_FASTCALL compare_function_ex(zval *result, zval *op1, zval *op2, bool equality_only) /* {{{ */
+ZEND_API int ZEND_FASTCALL compare_function_ex(zval *result, zval *op1, zval *op2, zend_bool equality_only) /* {{{ */
 {
 	int ret;
 	int converted = 0;
