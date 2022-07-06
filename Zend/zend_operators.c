@@ -2016,22 +2016,39 @@ static int compare_long_to_string(zend_long lval, zend_string *str) /* {{{ */
 {
 	zend_long str_lval;
 	double str_dval;
-	zend_uchar type = is_numeric_string(ZSTR_VAL(str), ZSTR_LEN(str), &str_lval, &str_dval, 0);
+	int num_cmp_result;
+	bool trailing_data = false;
+	zend_uchar type = is_numeric_string_ex(ZSTR_VAL(str), ZSTR_LEN(str), &str_lval, &str_dval, 1, NULL, &trailing_data);
 
 	if (type == IS_LONG) {
-		return lval > str_lval ? 1 : lval < str_lval ? -1 : 0;
-	}
-
-	if (type == IS_DOUBLE) {
+		num_cmp_result = lval > str_lval ? 1 : lval < str_lval ? -1 : 0;
+		if (!trailing_data) {
+			return num_cmp_result;
+		}
+	} else if (type == IS_DOUBLE) {
 		double diff = (double) lval - str_dval;
-		return ZEND_NORMALIZE_BOOL(diff);
+		num_cmp_result = ZEND_NORMALIZE_BOOL(diff);
+		if (!trailing_data) {
+			return num_cmp_result;
+		}
+	} else {
+		num_cmp_result = ZEND_NORMALIZE_BOOL(lval);
 	}
 
 	zend_string *lval_as_str = zend_long_to_str(lval);
-	int cmp_result = zend_binary_strcmp(
+	int str_cmp_result = zend_binary_strcmp(
 		ZSTR_VAL(lval_as_str), ZSTR_LEN(lval_as_str), ZSTR_VAL(str), ZSTR_LEN(str));
+	str_cmp_result = ZEND_NORMALIZE_BOOL(str_cmp_result);
 	zend_string_release(lval_as_str);
-	return ZEND_NORMALIZE_BOOL(cmp_result);
+
+	zend_bool cmp_result_changed_observably = (num_cmp_result == 0 && str_cmp_result != 0);
+	if (cmp_result_changed_observably) {
+		zend_error(E_WARNING,
+			"Result of comparison between " ZEND_LONG_FMT " and \"%s\" will change (%d to %d)",
+			lval, ZSTR_VAL(str), num_cmp_result, str_cmp_result);
+	}
+
+	return num_cmp_result;
 }
 /* }}} */
 
@@ -2039,25 +2056,38 @@ static int compare_double_to_string(double dval, zend_string *str) /* {{{ */
 {
 	zend_long str_lval;
 	double str_dval;
-	zend_uchar type = is_numeric_string(ZSTR_VAL(str), ZSTR_LEN(str), &str_lval, &str_dval, 0);
+	int num_cmp_result;
+	bool trailing_data = false;
+    zend_uchar type = is_numeric_string_ex(ZSTR_VAL(str), ZSTR_LEN(str), &str_lval, &str_dval, 1, NULL, &trailing_data);
 
 	if (type == IS_LONG) {
 		double diff = dval - (double) str_lval;
-		return ZEND_NORMALIZE_BOOL(diff);
-	}
-
-	if (type == IS_DOUBLE) {
-		if (dval == str_dval) {
-			return 0;
+		num_cmp_result = ZEND_NORMALIZE_BOOL(diff);
+		if (!trailing_data) {
+			return num_cmp_result;
 		}
-		return ZEND_NORMALIZE_BOOL(dval - str_dval);
+	} else if (type == IS_DOUBLE) {
+		num_cmp_result = ZEND_NORMALIZE_BOOL(dval - str_dval);
+		if (!trailing_data) {
+			return num_cmp_result;
+		}
+	} else {
+		num_cmp_result = ZEND_NORMALIZE_BOOL(dval);
 	}
 
 	zend_string *dval_as_str = zend_strpprintf(0, "%.*G", (int) EG(precision), dval);
-	int cmp_result = zend_binary_strcmp(
+	int str_cmp_result = zend_binary_strcmp(
 		ZSTR_VAL(dval_as_str), ZSTR_LEN(dval_as_str), ZSTR_VAL(str), ZSTR_LEN(str));
+	str_cmp_result = ZEND_NORMALIZE_BOOL(str_cmp_result);
 	zend_string_release(dval_as_str);
-	return ZEND_NORMALIZE_BOOL(cmp_result);
+
+	zend_bool cmp_result_changed_observably = (num_cmp_result == 0 && str_cmp_result != 0);
+	if (cmp_result_changed_observably) {
+		zend_error(E_WARNING,
+			"Result of comparison between %G and \"%s\" will change (%d to %d)",
+			dval, ZSTR_VAL(str), num_cmp_result, str_cmp_result);
+	}
+	return num_cmp_result;
 }
 /* }}} */
 
