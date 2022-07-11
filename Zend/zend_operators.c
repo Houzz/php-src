@@ -2045,7 +2045,7 @@ static int compare_long_to_string(zend_long lval, zend_string *str) /* {{{ */
 	if (cmp_result_changed_observably) {
 		zend_error(E_NOTICE,
 			"Result of comparison between " ZEND_LONG_FMT " and \"%s\" changed (%d to %d)",
-			lval, ZSTR_VAL(str), str_cmp_result, num_cmp_result);
+			lval, ZSTR_VAL(str), num_cmp_result, str_cmp_result);
 	}
 
 	return str_cmp_result;
@@ -2085,7 +2085,7 @@ static int compare_double_to_string(double dval, zend_string *str) /* {{{ */
 	if (cmp_result_changed_observably) {
 		zend_error(E_NOTICE,
 			"Result of comparison between %G and \"%s\" changed (%d to %d)",
-			dval, ZSTR_VAL(str), str_cmp_result, num_cmp_result);
+			dval, ZSTR_VAL(str), num_cmp_result, str_cmp_result);
 	}
 	return str_cmp_result;
 }
